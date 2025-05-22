@@ -35,21 +35,51 @@
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "API v1",
         "groups": [
           {
-            "group": "API Documentation",
+            "group": "SIP Trunks",
             "pages": [
-              "api-reference/introduction"
+              "api-reference/endpoint/sip_trunks/list",
+              "api-reference/endpoint/sip_trunks/get",
+              "api-reference/endpoint/sip_trunks/post",
+              "api-reference/endpoint/sip_trunks/put",
+              "api-reference/endpoint/sip_trunks/delete"
             ]
           },
           {
-            "group": "Endpoint Examples",
+            "group": "Phones",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api-reference/endpoint/phones/list",
+              "api-reference/endpoint/phones/get",
+              "api-reference/endpoint/phones/post",
+              "api-reference/endpoint/phones/put",
+              "api-reference/endpoint/phones/delete"
+            ]
+          },
+          {
+            "group": "Agents",
+            "pages": [
+              "api-reference/endpoint/agents/list",
+              "api-reference/endpoint/agents/get"
+            ]
+          },
+          {
+            "group": "Interactions",
+            "pages": [
+              "api-reference/endpoint/interactions/list",
+              "api-reference/endpoint/interactions/get",
+              "api-reference/endpoint/interactions/post"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/endpoint/webhooks/list",
+              "api-reference/endpoint/webhooks/get",
+              "api-reference/endpoint/webhooks/post",
+              "api-reference/endpoint/webhooks/put",
+              "api-reference/endpoint/webhooks/delete"
             ]
           }
         ]

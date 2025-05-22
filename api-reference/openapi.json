@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "OpenAPI Plant Store",
-    "description": "A sample API that uses a plant store as an example to demonstrate features in the OpenAPI specification",
+    "title": "Voice Agent API",
+    "description": "API for managing voice agents, phones, SIP trunks, webhooks, and interactions. This API allows you to manage your voice communication infrastructure programmatically.",
     "license": {
       "name": "MIT"
     },
@@ -10,7 +10,8 @@
   },
   "servers": [
     {
-      "url": "http://sandbox.mintlify.com"
+      "url": "https://api.voice-mate.com/v1",
+      "description": "Production API endpoint"
     }
   ],
   "security": [
@@ -19,105 +20,1087 @@
     }
   ],
   "paths": {
-    "/plants": {
+    "/phones": {
       "get": {
-        "description": "Returns all plants from the system that the user has access to",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "description": "The maximum number of results to return",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
+        "summary": "List all phones",
+        "description": "Returns all phones that are associated with the account.",
         "responses": {
           "200": {
-            "description": "Plant response",
+            "description": "List of phones",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Plant"
-                  }
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "phones": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Phone"
+                      }
+                    }
+                  },
+                  "required": ["status", "phones"]
                 }
               }
             }
           },
           "400": {
-            "description": "Unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
           }
         }
       },
       "post": {
-        "description": "Creates a new plant in the store",
+        "summary": "Register a new phone",
+        "description": "Register a new phone number to the account.",
         "requestBody": {
-          "description": "Plant to add to the store",
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NewPlant"
+                "type": "object",
+                "properties": {
+                  "phone": {
+                    "type": "string",
+                    "description": "E.164 formatted phone number you would like to register"
+                  },
+                  "sip_trunk_id": {
+                    "type": "string",
+                    "description": "SIP trunk identifier phone will be attached to"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name for the phone"
+                  },
+                  "inbound_agent_id": {
+                    "type": "string",
+                    "description": "SID of agent that will handle inbound calls",
+                    "nullable": true
+                  },
+                  "outbound_agent_id": {
+                    "type": "string",
+                    "description": "SID of agent that will handle outbound calls",
+                    "nullable": true
+                  }
+                },
+                "required": ["phone", "sip_trunk_id"]
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
-            "description": "plant response",
+            "description": "Phone registered",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Plant"
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "phone": {
+                      "$ref": "#/components/schemas/Phone"
+                    }
+                  },
+                  "required": ["status", "phone"]
                 }
               }
             }
           },
           "400": {
-            "description": "unexpected error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
           }
         }
       }
     },
-    "/plants/{id}": {
+    "/phones/{phone}": {
+      "parameters": [
+        {
+          "name": "phone",
+          "in": "path",
+          "required": true,
+          "description": "E.164 formatted phone number",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get phone details",
+        "description": "Get details of a specific phone.",
+        "responses": {
+          "200": {
+            "description": "Phone details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "phone": {
+                      "$ref": "#/components/schemas/Phone"
+                    }
+                  },
+                  "required": ["status", "phone"]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a phone",
+        "description": "Update a phone's name, inbound_agent_id, or outbound_agent_id.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name for the phone"
+                  },
+                  "inbound_agent_id": {
+                    "type": "string",
+                    "description": "SID of agent for inbound calls",
+                    "nullable": true
+                  },
+                  "outbound_agent_id": {
+                    "type": "string",
+                    "description": "SID of agent for outbound calls",
+                    "nullable": true
+                  }
+                },
+                "required": []
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Phone updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "phone": {
+                      "$ref": "#/components/schemas/Phone"
+                    }
+                  },
+                  "required": ["status", "phone"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
       "delete": {
-        "description": "Deletes a single plant based on the ID supplied",
+        "summary": "Delete a phone",
+        "description": "Delete a phone from the account.",
+        "responses": {
+          "204": {
+            "description": "Phone deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success"]
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/sip-trunks": {
+      "get": {
+        "summary": "List all SIP trunks",
+        "description": "Returns all externally managed SIP trunks.",
+        "responses": {
+          "200": {
+            "description": "List of SIP trunks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "sip_trunks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/SIPTrunk"
+                      }
+                    }
+                  },
+                  "required": ["status", "sip_trunks"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a SIP trunk",
+        "description": "Create a new externally managed SIP trunk.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name for the SIP trunk"
+                  },
+                  "termination_uri": {
+                    "type": "string",
+                    "description": "URI used for SIP trunk termination (e.g., the address calls are sent to)"
+                  },
+                  "sip_username": {
+                    "type": "string",
+                    "description": "Optional SIP username for authentication"
+                  },
+                  "sip_password": {
+                    "type": "string",
+                    "description": "Optional SIP password for authentication"
+                  }
+                },
+                "required": ["name", "termination_uri"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SIP trunk created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "sip_trunk": {
+                      "$ref": "#/components/schemas/SIPTrunk"
+                    }
+                  },
+                  "required": ["status", "sip_trunk"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/sip-trunks/{sid}": {
+      "parameters": [
+        {
+          "name": "sid",
+          "in": "path",
+          "required": true,
+          "description": "SIP trunk identifier",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get SIP trunk details",
+        "description": "Get details of a specific SIP trunk (only externally managed).",
+        "responses": {
+          "200": {
+            "description": "SIP trunk details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "sip_trunk": {
+                      "$ref": "#/components/schemas/SIPTrunk"
+                    }
+                  },
+                  "required": ["status", "sip_trunk"]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a SIP trunk",
+        "description": "Update an externally managed SIP trunk.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Name for the SIP trunk"
+                  },
+                  "termination_uri": {
+                    "type": "string",
+                    "description": "URI used for SIP trunk termination (e.g., the address calls are sent to)"
+                  },
+                  "sip_username": {
+                    "type": "string",
+                    "description": "Optional SIP username for authentication"
+                  },
+                  "sip_password": {
+                    "type": "string",
+                    "description": "Optional SIP password for authentication"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SIP trunk updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "sip_trunk": {
+                      "$ref": "#/components/schemas/SIPTrunk"
+                    }
+                  },
+                  "required": ["status", "sip_trunk"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a SIP trunk",
+        "description": "Delete an externally managed SIP trunk. SIP trunk cannot be deleted if there are related phones.",
+        "responses": {
+          "204": {
+            "description": "SIP trunk deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success"]
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/agents": {
+      "get": {
+        "summary": "List all agents",
+        "description": "Returns all agents that the user has access to.",
+        "responses": {
+          "200": {
+            "description": "List of agents",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "agents": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Agent"
+                      }
+                    }
+                  },
+                  "required": ["status", "agents"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/agents/{sid}": {
+      "parameters": [
+        {
+          "name": "sid",
+          "in": "path",
+          "required": true,
+          "description": "Agent identifier",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get agent details",
+        "description": "Get details of a specific agent.",
+        "responses": {
+          "200": {
+            "description": "Agent details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "agent": {
+                      "$ref": "#/components/schemas/Agent"
+                    }
+                  },
+                  "required": ["status", "agent"]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "summary": "List all webhooks",
+        "description": "Returns all webhooks that the user has access to.",
+        "responses": {
+          "200": {
+            "description": "List of webhooks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "webhooks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Webhook"
+                      }
+                    }
+                  },
+                  "required": ["status", "webhooks"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Register a new webhook",
+        "description": "Register a new webhook for call events. Only one global webhook (blank phone_number_id) is allowed per user. Only one webhook per phone number is allowed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "HTTPS URL to receive webhook events",
+                    "format": "uri"
+                  },
+                  "phone_number_id": {
+                    "type": "string",
+                    "description": "SID of the phone number to attach the webhook to. Leave blank for a global webhook.",
+                    "nullable": true
+                  },
+                  "api_key_id": {
+                    "type": "string",
+                    "description": "SID of the API key to use for webhook authentication"
+                  },
+                  "call_started_event": {
+                    "type": "boolean",
+                    "description": "Whether to trigger webhook on call started event",
+                    "default": true
+                  },
+                  "call_ended_event": {
+                    "type": "boolean",
+                    "description": "Whether to trigger webhook on call ended event",
+                    "default": true
+                  }
+                },
+                "required": ["url", "api_key_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "webhook": {
+                      "$ref": "#/components/schemas/Webhook"
+                    }
+                  },
+                  "required": ["status", "webhook"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/webhooks/{sid}": {
+      "parameters": [
+        {
+          "name": "sid",
+          "in": "path",
+          "required": true,
+          "description": "Webhook identifier",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get webhook details",
+        "description": "Get details of a specific webhook.",
+        "responses": {
+          "200": {
+            "description": "Webhook details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "webhook": {
+                      "$ref": "#/components/schemas/Webhook"
+                    }
+                  },
+                  "required": ["status", "webhook"]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update a webhook",
+        "description": "Update a webhook's url, call_started_event, call_ended_event, phone_number_id, or api_key_id. Only these fields are allowed.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "HTTPS URL to receive webhook events",
+                    "format": "uri"
+                  },
+                  "call_started_event": {
+                    "type": "boolean",
+                    "description": "Whether to trigger webhook on call started event"
+                  },
+                  "call_ended_event": {
+                    "type": "boolean",
+                    "description": "Whether to trigger webhook on call ended event"
+                  },
+                  "phone_number_id": {
+                    "type": "string",
+                    "description": "SID of the phone number to attach the webhook to. Leave blank for a global webhook.",
+                    "nullable": true
+                  },
+                  "api_key_id": {
+                    "type": "string",
+                    "description": "SID of the API key to use for webhook authentication"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "webhook": {
+                      "$ref": "#/components/schemas/Webhook"
+                    }
+                  },
+                  "required": ["status", "webhook"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a webhook",
+        "description": "Delete a webhook from the account.",
+        "responses": {
+          "204": {
+            "description": "Webhook deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success"]
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/interactions": {
+      "get": {
+        "summary": "List all interactions",
+        "description": "Return general interaction info. \n\nFor variables, recording, and log, use `GET /interactions/{sid}`",
         "parameters": [
           {
-            "name": "id",
-            "in": "path",
-            "description": "ID of plant to delete",
-            "required": true,
+            "name": "agent_id",
+            "in": "query",
+            "description": "Filter by agent identifier",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "description": "Filter by interaction type",
+            "schema": {
+              "type": "string",
+              "enum": ["phone_call", "web_call", "test_chat"]
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "description": "Filter by interaction direction",
+            "schema": {
+              "type": "string",
+              "enum": ["inbound", "outbound"]
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Filter by interaction status",
+            "schema": {
+              "type": "string",
+              "enum": ["initiated", "in_progress", "agent_hangup", "user_hangup", "dial_rejected", "dial_busy", "dial_failed", "transferred", "error", "insufficient_balance"]
+            }
+          },
+          {
+            "name": "started_at_gte",
+            "in": "query",
+            "description": "Filter by start time (greater than or equal to, Unix timestamp in milliseconds)",
             "schema": {
               "type": "integer",
-              "format": "int64"
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "started_at_lte",
+            "in": "query",
+            "description": "Filter by start time (less than or equal to, Unix timestamp in milliseconds)",
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "duration_gte",
+            "in": "query",
+            "description": "Filter by duration (greater than or equal to, in seconds)",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "duration_lte",
+            "in": "query",
+            "description": "Filter by duration (less than or equal to, in seconds)",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number for pagination (starts at 1)",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 1,
+              "default": 1
             }
           }
         ],
         "responses": {
-          "204": {
-            "description": "Plant deleted",
-            "content": {}
+          "200": {
+            "description": "List of interactions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "pagination": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "format": "int32",
+                          "description": "Total number of interactions",
+                          "example": 2800
+                        },
+                        "page": {
+                          "type": "integer",
+                          "format": "int32",
+                          "description": "Current page number",
+                          "example": 1
+                        },
+                        "num_pages": {
+                          "type": "integer",
+                          "format": "int32",
+                          "description": "Total number of pages",
+                          "example": 3
+                        },
+                        "page_size": {
+                          "type": "integer",
+                          "format": "int32",
+                          "description": "Number of items per page",
+                          "example": 1000
+                        },
+                        "has_next": {
+                          "type": "boolean",
+                          "description": "Whether there is a next page"
+                        }
+                      },
+                      "required": ["total", "page", "num_pages", "page_size", "has_next"]
+                    },
+                    "interactions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/InteractionList"
+                      }
+                    }
+                  },
+                  "required": ["status", "pagination", "interactions"]
+                }
+              }
+            }
           },
           "400": {
-            "description": "unexpected error",
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new outbound interaction (phone call)",
+        "description": "Initiate a new outbound phone call interaction. The from_phone must be a phone number registered to your account. You may optionally provide override_agent_id to use a specific agent for this call. If not provided, the outbound agent configured for the from_phone will be used. You may also provide variables as key-value pairs (string, number, or boolean) to pass to the agent for this interaction.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "from_phone": {
+                    "type": "string",
+                    "description": "E.164 formatted phone number to make the call from. Must be a phone number registered to your account.",
+                    "example": "+15893858485"
+                  },
+                  "to_phone": {
+                    "type": "string",
+                    "description": "E.164 formatted phone number to call.",
+                    "example": "+15893858485"
+                  },
+                  "override_agent_id": {
+                    "type": "string",
+                    "description": "Optional SID of the agent to use for this specific call. If not provided, the outbound agent configured for the `from_phone` will be used.",
+                    "nullable": true,
+                    "example": "agent_340846df-6fc5-4550-8c8e-590761765548"
+                  },
+                  "variables": {
+                    "type": "object",
+                    "description": "Optional key-value pairs of variables to pass to the agent for this interaction.",
+                    "additionalProperties": {
+                      "oneOf": [
+                        { "type": "string" },
+                        { "type": "boolean" },
+                        { "type": "number" }
+                      ]
+                    },
+                    "example": {
+                      "customer_name": "John Doe",
+                      "appointment_time": "2025-06-01T10:00:00Z"
+                    }
+                  }
+                },
+                "required": ["from_phone", "to_phone"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Interaction initiated",
+            "content": {
+              "application/json": {
+                "example": {
+                  "status": "success",
+                  "interaction": {
+                    "sid": "interaction_601696d9-9fa9-4db0-8f5a-252427780c8d",
+                    "agent_sid": "agent_340846df-6fc5-4550-8c8e-590761765548",
+                    "type": "phone_call",
+                    "status": "initiated",
+                    "direction": "outbound",
+                    "from_number": "+14247881561",
+                    "to_number": "+34671573813"
+                  }
+                },
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "interaction": {
+                      "$ref": "#/components/schemas/InteractionDetail"
+                    }
+                  },
+                  "required": ["status", "interaction"]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Resource not found (e.g., from_phone or agent_id not found)",
             "content": {
               "application/json": {
                 "schema": {
@@ -125,28 +1108,54 @@
                 }
               }
             }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
           }
         }
       }
-    }
-  },
-  "webhooks": {
-    "/plant/webhook": {
-      "post": {
-        "description": "Information about a new plant added to the store",
-        "requestBody": {
-          "description": "Plant added to the store",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NewPlant"
-              }
-            }
+    },
+    "/interactions/{sid}": {
+      "parameters": [
+        {
+          "name": "sid",
+          "in": "path",
+          "required": true,
+          "description": "Interaction identifier",
+          "schema": {
+            "type": "string"
           }
-        },
+        }
+      ],
+      "get": {
+        "summary": "Get interaction details",
+        "description": "Get details of a specific interaction, including variables, recording URL, and log.",
         "responses": {
           "200": {
-            "description": "Return a 200 status to indicate that the data was received successfully"
+            "description": "Interaction details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": ["success", "error"]
+                    },
+                    "interaction": {
+                      "$ref": "#/components/schemas/InteractionDetail"
+                    }
+                  },
+                  "required": ["status", "interaction"]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
           }
         }
       }
@@ -154,55 +1163,493 @@
   },
   "components": {
     "schemas": {
-      "Plant": {
-        "required": [
-          "name"
-        ],
+      "Phone": {
         "type": "object",
+        "required": ["sid", "name", "number", "sip_trunk", "created_at", "updated_at"],
         "properties": {
-          "name": {
-            "description": "The name of the plant",
-            "type": "string"
+          "sid": {
+            "type": "string",
+            "description": "String identifier of phone",
+            "example": "phone_b30fbf02-83be-4214-9724-f889085ecffb"
           },
-          "tag": {
-            "description": "Tag to specify the type",
-            "type": "string"
+          "name": {
+            "type": "string",
+            "description": "Name you gave to phone",
+            "example": "main_office_phone"
+          },
+          "number": {
+            "type": "string",
+            "description": "E.164 formatted phone number",
+            "example": "+15893858485"
+          },
+          "sip_trunk": {
+            "type": "object",
+            "required": ["system"],
+            "properties": {
+              "sid": {
+                "type": "string",
+                "description": "SIP trunk stringidentifier",
+                "example": "sip_1d31b6c1-dcea-425a-a3e1-3a9227a95381"
+              },
+              "name": {
+                "type": "string",
+                "description": "name you gave to SIP trunk",
+                "example": "production"
+              },
+              "system": {
+                "type": "boolean",
+                "description": "If true, SIP trank managed by Voice Mate. False if it is your own SIP trunk",
+                "example": false
+              }
+            }
+          },
+          "inbound_agent_id": {
+            "type": "string",
+            "description": "SID of agent that will handle inbound calls. Might be null but in that case it must be provided in webhook otherwise will raise error on the call",
+            "nullable": true,
+            "example": "agent_340846df-6fc5-4550-8c8e-590761765548"
+          },
+          "outbound_agent_id": {
+            "type": "string",
+            "description": "SID of agent that will handle outbound calls. Might be null but in that case it must be provided in webhook otherwise will raise error on the call",
+            "nullable": true,
+            "example": "agent_340846df-6fc5-4550-8c8e-590761765548"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2025-05-03T10:43:50.472662Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2025-05-03T10:43:50.472702Z"
           }
         }
       },
-      "NewPlant": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/Plant"
+      "SIPTrunk": {
+        "type": "object",
+        "required": ["sid", "name", "termination_uri", "created_at", "updated_at"],
+        "properties": {
+          "sid": {
+            "type": "string",
+            "description": "SIP trunk string identifier",
+            "example": "sip_1d31b6c1-dcea-425a-a3e1-3a9227a95381"
           },
-          {
-            "required": [
-              "id"
-            ],
+          "name": {
+            "type": "string",
+            "description": "Name you gave to SIP trunk",
+            "example": "production"
+          },
+          "termination_uri": {
+            "type": "string",
+            "description": "URI used for SIP trunk termination (e.g., the address calls are sent to)",
+            "example": "my-company.pstn.twilio.com"
+          },
+          "sip_username": {
+            "type": "string",
+            "description": "Optional SIP username for authentication",
+            "example": "myuser"
+          },
+          "sip_password": {
+            "type": "string",
+            "description": "Optional SIP password for authentication",
+            "example": "mypassword"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2025-03-01T23:52:56.297986Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2025-05-03T10:43:50.326335Z"
+          }
+        }
+      },
+      "Agent": {
+        "type": "object",
+        "required": ["sid"],
+        "properties": {
+          "sid": {
+            "type": "string",
+            "description": "Agent identifier",
+            "example": "agent_340846df-6fc5-4550-8c8e-590761765548"
+          },
+          "name": {
+            "type": "string",
+            "description": "Agent name",
+            "example": "Schedule call"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp",
+            "example": "2025-05-03T10:43:50.472662Z"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp",
+            "example": "2025-05-03T10:43:50.472702Z"
+          }
+        }
+      },
+      "Webhook": {
+        "type": "object",
+        "required": ["sid", "url", "call_started_event", "call_ended_event", "created_at", "updated_at", "api_key"],
+        "properties": {
+          "sid": {
+            "type": "string",
+            "description": "Webhook identifier"
+          },
+          "url": {
+            "type": "string",
+            "description": "Webhook HTTPS URL",
+            "format": "uri"
+          },
+          "call_started_event": {
+            "type": "boolean",
+            "description": "Whether to trigger webhook when call started"
+          },
+          "call_ended_event": {
+            "type": "boolean",
+            "description": "Whether to trigger webhook on call ended event"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last update timestamp"
+          },
+          "phone_number": {
             "type": "object",
+            "nullable": true,
+            "description": "If phone is set, Webhook will work only for this phone. If null, Webhook will work for all phones. Only one webhook for all phones is allowed.",
             "properties": {
-              "id": {
-                "description": "Identification number of the plant",
-                "type": "integer",
-                "format": "int64"
+              "sid": {
+                "type": "string",
+                "description": "Phone number identifier"
+              },
+              "number": {
+                "type": "string",
+                "description": "E.164 formatted phone number"
+              },
+              "name": {
+                "type": "string",
+                "description": "Name for the phone number"
+              }
+            }
+          },
+          "api_key": {
+            "type": "object",
+            "description": "API key that will be used for webhook authentication",
+            "properties": {
+              "sid": {
+                "type": "string",
+                "description": "API key identifier"
+              },
+              "name": {
+                "type": "string",
+                "description": "API key name"
               }
             }
           }
+        }
+      },
+      "InteractionList": {
+        "type": "object",
+        "properties": {
+          "sid": {
+            "type": "string",
+            "description": "Unique identifier for the interaction",
+            "example": "interaction_340846df-6fc5-4550-8c8e-590761765548"
+          },
+          "agent_sid": {
+            "type": "string",
+            "description": "SID of the agent involved in the interaction",
+            "example": "agent_340846df-6fc5-4550-8c8e-590761765548",
+            "nullable": true
+          },
+          "from_number": {
+            "type": "string",
+            "description": "Phone number from which phone call was made. E.164 format",
+            "example": "+15893858485"
+          },
+          "to_number": {
+            "type": "string",
+            "description": "Phone number to which phone call was made. E.164 format",
+            "example": "+15893858485"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["inbound", "outbound"],
+            "description": "Direction of the interaction",
+            "example": "inbound"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["phone_call", "web_call", "test_chat"],
+            "description": "Type of interaction"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "initiated",
+              "in_progress", 
+              "agent_hangup",
+              "user_hangup",
+              "dial_rejected",
+              "dial_busy",
+              "dial_failed",
+              "transferred",
+              "error",
+              "insufficient_balance"
+            ],
+            "description": "Current status of the interaction",
+            "example": "in_progress"
+          },
+          "started_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Timestamp when the interaction started (Unix timestamp in milliseconds)",
+            "nullable": true,
+            "example": 1746297830472
+          },
+          "ended_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Timestamp when the interaction ended (Unix timestamp in milliseconds)",
+            "nullable": true,
+            "example": 1746297830472
+          },
+          "duration": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Duration of the interaction in seconds",
+            "example": 100
+          },
+          "cost": {
+            "type": "number",
+            "format": "float",
+            "description": "Cost of the interaction in dollars. Could be null if the interaction is not yet completed.",
+            "example": 0.0094,
+            "nullable": true
+          }
+        },
+        "required": [
+          "sid",
+          "from_number",
+          "to_number",
+          "direction",
+          "type",
+          "duration",
+          "status"
+        ]
+      },
+      "InteractionDetail": {
+        "type": "object",
+        "properties": {
+          "sid": {
+            "type": "string",
+            "description": "Unique identifier for the interaction",
+            "example": "interaction_340846df-6fc5-4550-8c8e-590761765548"
+          },
+          "agent_sid": {
+            "type": "string",
+            "description": "SID of the agent involved in the interaction",
+            "example": "agent_340846df-6fc5-4550-8c8e-590761765548",
+            "nullable": true
+          },
+          "from_number": {
+            "type": "string",
+            "description": "Phone number from which phone call was made. E.164 format",
+            "example": "+15893858485"
+          },
+          "to_number": {
+            "type": "string",
+            "description": "Phone number to which phone call was made. E.164 format",
+            "example": "+15893858485"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["inbound", "outbound"],
+            "description": "Direction of the interaction",
+            "example": "inbound"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["phone_call", "web_call", "test_chat"],
+            "description": "Type of interaction"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "initiated",
+              "in_progress", 
+              "agent_hangup",
+              "user_hangup",
+              "dial_rejected",
+              "dial_busy",
+              "dial_failed",
+              "transferred",
+              "error",
+              "insufficient_balance"
+            ],
+            "description": "Current status of the interaction",
+            "example": "in_progress"
+          },
+          "started_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Timestamp when the interaction started (Unix timestamp in milliseconds)",
+            "nullable": true,
+            "example": 1746297830472
+          },
+          "ended_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Timestamp when the interaction ended (Unix timestamp in milliseconds)",
+            "nullable": true,
+            "example": 1746297830472
+          },
+          "duration": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Duration of the interaction in seconds",
+            "example": 100
+          },
+          "variables": {
+            "type": "object",
+            "description": "Key-value pairs of variables extracted during the interaction.",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "boolean" },
+                { "type": "number" }
+              ]
+            },
+            "example": {
+              "customer_name": "John Doe",
+              "appointment_time": "2025-06-01T10:00:00Z"
+            }
+          },
+          "recording_url": {
+            "type": "string",
+            "format": "url",
+            "description": "URL to the interaction recording (if available).",
+            "nullable": true,
+            "example": "https://storage.googleapis.com/my-bucket/recordings/interaction_sid.wav"
+          },
+          "log": {
+            "type": "array",
+            "description": "Log of messages exchanged during the interaction (agent and user roles).",
+            "items": {
+              "type": "object",
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "enum": ["agent", "user"]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "timestamp": {
+                  "type": "integer",
+                  "format": "int64",
+                  "description": "Unix timestamp in milliseconds"
+                }
+              },
+              "required": ["role", "message", "timestamp"]
+            }
+          }
+        },
+        "required": [
+          "sid",
+          "from_number",
+          "to_number",
+          "direction",
+          "type",
+          "status"
         ]
       },
       "Error": {
-        "required": [
-          "error",
-          "message"
-        ],
         "type": "object",
+        "required": ["error"],
         "properties": {
           "error": {
-            "type": "integer",
-            "format": "int32"
+            "type": "string",
+            "description": "Error type"
           },
-          "message": {
-            "type": "string"
+          "detail": {
+            "type": "string",
+            "description": "Detailed error message"
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Validation error",
+              "detail": "Invalid input data"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Not found",
+              "detail": "Resource not found"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Resource conflict",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Unique constraint violation",
+              "detail": "Key (phone) already exists"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Internal server error"
+            }
           }
         }
       }
@@ -210,7 +1657,8 @@
     "securitySchemes": {
       "bearerAuth": {
         "type": "http",
-        "scheme": "bearer"
+        "scheme": "bearer",
+        "description": "Bearer auth header. Pass with value 'Bearer {api_key}'. Api key can be found in account Settings -> API Keys page"
       }
     }
   }
